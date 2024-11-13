@@ -4,109 +4,103 @@ import { ApiResponse } from "../utils/ApiResponse.util.js";
 import { ApiError } from "../utils/ApiError.util.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.util.js";
 
-const registerUser = asyncHandler(
-  async (req, res) => {
-    
-    // get user details from frontend
-    // validation - not empty
-    // check if user already exists: username, email
-    // check for images, check for avatar
-    // upload them to cloudinary, avatar
-    // create user object - create entry in db
-    // remove password and refresh token field from response
-    // check for user creation
-    // return res
 
-    const {
-      fullName,
-      email,
-      username,
-      password
-    } = req.body
-
-    console.log("email", email);
+const registerUser = asyncHandler( async (req, res) => {
+  // get user details from frontend
+  // validation - not empty
+  // check if user already exists: username, email
+  // check for images, check for avatar
+  // upload them to cloudinary, avatar
+  // create user object - create entry in db
+  // remove password and refresh token field from response
+  // check for user creation
+  // return res
 
 
-    //? Validations
-    
-    if ([fullName, email, username, password].some( () => field?.trim() === "" )) {
-      throw new ApiError(400, "All fields are required");
-    }
+  const {fullName, email, username, password } = req.body
+  //console.log("email: ", email);
 
-    // email & password validation regex pattern
-    // Regular expression for validating email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      throw new ApiError(400, "Invalid email format");
-    }
+  if (
+      [fullName, email, username, password].some((field) => field?.trim() === "")
+  ) {
+      throw new ApiError(400, "All fields are required")
+  }
 
-    // Regular expression for validating password
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegex.test(password)) {
-      throw new ApiError(400, "Password must contain at least one uppercase letter, one lowercase letter, one number, one special character, and be at least 8 characters long");
-    }
+  // email & password validation regex pattern
+  // Regular expression for validating email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    throw new ApiError(400, "Invalid email format");
+  }
 
-    // Extract username and domain from email
-    const emailParts = email.split('@');
-    const emailUsername = emailParts[0];
-    const emailDomain = emailParts[1].split('.')[0]; // Assuming the domain is the part before the first dot
+  // Regular expression for validating password
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  if (!passwordRegex.test(password)) {
+    throw new ApiError(400, "Password must contain at least one uppercase letter, one lowercase letter, one number, one special character, and be at least 8 characters long");
+  }
 
-    // Check if password contains username or email domain
-    // if (password.includes(username) || password.includes(emailUsername) || password.includes(emailDomain)) {
-    //   throw new ApiError(400, "Password must not contain your username or parts of your email");
-    // }
+  // Extract username and domain from email
+  const emailParts = email.split('@');
+  const emailUsername = emailParts[0];
+  const emailDomain = emailParts[1].split('.')[0]; // Assuming the domain is the part before the first dot
 
-    const userExists = await User.findOne({
-      $or: [
-        { email }, 
-        { username }
-      ]
-    });
-    if (userExists) {
-      throw new ApiError(409, "User already exists");
-    }
+  // Check if password contains username or email domain
+  if (password.includes(username) || password.includes(emailUsername) || password.includes(emailDomain)) {
+    throw new ApiError(400, "Password must not contain your username or parts of your email");
+  }
 
-    const avatarLocalPath = req.files?.avatar[0]?.path;
-    const coverImageLocalPath = req.files?.coverImage[0]?.path;
+  const existedUser = await User.findOne({
+      $or: [{ username }, { email }]
+  })
 
-    if (!avatarLocalPath) {
-      throw new ApiError(400, "Avatar file is required");
-    }
-    
-    const avatar = await uploadOnCloudinary(avatarLocalPath);
-    const coverImage = await uploadOnCloudinary(coverImageLocal);
+  if (existedUser) {
+      throw new ApiError(409, "User with email or username already exists")
+  }
+  //console.log(req.files);
 
-    if (!avatar) {
-      throw new ApiError(400, "Avatar upload failed");
-    }
+  const avatarLocalPath = req.files?.avatar[0]?.path;
+  //const coverImageLocalPath = req.files?.coverImage[0]?.path;
 
-    const user =await User.create({
+  let coverImageLocalPath;
+  if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
+      coverImageLocalPath = req.files.coverImage[0].path
+  }
+  
+
+  if (!avatarLocalPath) {
+      throw new ApiError(400, "Avatar file is required")
+  }
+
+  const avatar = await uploadOnCloudinary(avatarLocalPath)
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+
+  if (!avatar) {
+      throw new ApiError(400, "Avatar file is required")
+  }
+
+
+  const user = await User.create({
       fullName,
       avatar: avatar.url,
       coverImage: coverImage?.url || "",
-      email,
+      email, 
       password,
       username: username.toLowerCase()
-    });
-    
-    const createdUser = await User.findById(user._id).select(
+  })
+
+  const createdUser = await User.findById(user._id).select(
       "-password -refreshToken"
-    );
+  )
 
-    if (!createdUser) {
-      throw new ApiError(400, "Something went wrong while registering the user");
-    }
-
-    console.log(user);
-    console.table(user);
-    console.log(createdUser);
-    console.table(createdUser);
-    
-    return res.status(201).json(
-      new ApiResponse(200, createdUser, "User registered successfully")
-    );
+  if (!createdUser) {
+      throw new ApiError(500, "Something went wrong while registering the user")
   }
-)
+
+  return res.status(201).json(
+      new ApiResponse(200, createdUser, "User registered Successfully")
+  )
+
+} )
 
 export { registerUser };
 
