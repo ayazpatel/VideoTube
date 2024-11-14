@@ -32,14 +32,18 @@ router.route("/register").post(
   registerUser
 );
 
-router.route("/login").post(loginUser);
+router.route("/login").post(
+  loginUser
+);
 
 //* secured routes
 router.route("/logout").post(
   verifyJWT, // middleware
   logoutUser // controller
 );
-router.route("/refresh-token").post(refreshAccessToken);
+router.route("/refresh-token").post(
+  refreshAccessToken
+);
 router.route("/change-password").post(
   verifyJWT, 
   changeCurrentPassword
@@ -53,7 +57,7 @@ router.route("/update-avatar").patch(
   upload.single("avatar"),
   updateUserAvatar
 );
-router.route("/update-coverImage").patch(
+router.route("/update-cover-image").patch(
   verifyJWT,
   upload.single("coverImage"),
   updateUserCoverImage
@@ -61,6 +65,17 @@ router.route("/update-coverImage").patch(
 router.route("/current-user").get(
   verifyJWT,
   getCurrentUser
+);
+
+//?params write 
+//* -> key: value <-- 'value' is param value
+router.route("/channel/:username").get(
+  verifyJWT,
+  getUserChannelProfile
+);
+router.route("/history").get(
+  verifyJWT,
+  getWatchHistory
 );
 //* secured routes ends
 
