@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.util.js";
 import { ApiResponse } from "../utils/ApiResponse.util.js";
 import { ApiError } from "../utils/ApiError.util.js";
-import { Subscription } from "../models/subscriber.model.js";
+import { Subscription } from "../models/subscription.model.js";
 import jwt from "jsonwebtoken";
 
 // // to know subs of channel 'xyz' -> we count channels from document such that channel=userID

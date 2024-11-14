@@ -22,7 +22,7 @@ connectDB()
 
 /* 
 *alternate approach in db-folder
-
+import express from "express"
 const app = express();
 const app = express()
 ;( async () => {
