@@ -4,6 +4,7 @@ import { ApiResponse } from "../utils/ApiResponse.util.js";
 import { ApiError } from "../utils/ApiError.util.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.util.js";
 import jwt from "jsonwebtoken";
+import { upload } from "../middlewares/multer.middleware.js";
 
 const generateAccessAndRefreshTokens = async (userId) => {
     try {
@@ -268,12 +269,172 @@ const refreshAccessToken = asyncHandler(
     }
 );
 
+const changeCurrentPassword = asyncHandler(
+    async (req, res) => {
+        const { oldPassword, newPassword , confirmNewPassword} = req.body;
+
+        if(!(newPassword === confirmNewPassword)) {
+            throw new ApiError(400, "New password and confirm new password do not match");
+        }
+        
+        const user = await User.findById(req.user?._id);
+        if (!user) {
+            throw new ApiError(400, "User not found");
+        }
+
+        const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+        if (!isPasswordCorrect) {
+            throw new ApiError(400, "Invalid old password");
+        }
+
+        user.password = newPassword;
+        await user.save({validateBeforeSave: false});
+
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(200, {}, "Password changed successfully")
+        );
+    }
+);
+
+const getCurrentUser = asyncHandler(
+    async (req, res) => {
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200, 
+                req.user, 
+                "Current user fetched successfully"
+            )
+        );
+    }
+);
+
+//? Professional Production Advice
+//* Better Approach -> as we dont have to save a full user again in it as it cause text data to be saved again and again on database server side
+//* file update -> like image etc -> make other controller or just hit a seperate endpoint to reduce network congession as hear text also gets updated may cause optimization issues..
+const updateAccountDetails = asyncHandler(
+    async (req, res) => {
+        const { fullName, email } = req.body;
+
+        if (!(fullName || email)) {
+            throw new ApiError(400, "All fields are required");
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.user?._id,
+            {
+                $set: {
+                    fullName, //? ES6 syntax -> if key and value are same then we can write it once
+                    //? i.e fullName: fullName
+                    email
+                }
+            },
+            {
+                new: true //? this results in returning the updated user information
+            },
+            //? we can add another 3rd object too {}
+        ).select("-password -refreshToken");
+
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                user,
+                "User updated successfully"
+            )
+        );
+    }
+);
+
+const updateUserAvatar = asyncHandler(
+    async (req, res) => {
+        
+        const avatarLocalPath = req.file?.path;
+        if (!avatarLocalPath) {
+            throw new ApiError(400, "Avatar file is missing");
+        }
+
+        const avatar = await uploadOnCloudinary(avatarLocalPath);
+        if (!avatar) {
+            throw new ApiError(400, "Error while uploading avatar");
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.user?._id,
+            {
+                $set: {
+                    avatar: avatar.url
+                }
+            },
+            {
+                new: true
+            }
+        ).select("-password -refreshToken");
+
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                user,
+                "Avatar updated successfully"
+            )
+        );
+    }
+);
+
+const updateUserCoverImage = asyncHandler(
+    async (req, res) => {
+        
+        const coverImageLocalPath = req.file?.path;
+        if (!coverImageLocalPath) {
+            throw new ApiError(400, "Cover image file is missing");
+        }
+
+        const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+        if (!coverImage) {
+            throw new ApiError(400, "Error while uploading coverImage");
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.user?._id,
+            {
+                $set: {
+                    coverImage: coverImage.url
+                }
+            },
+            {
+                new: true
+            }
+        ).select("-password -refreshToken");
+
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                user,
+                "Cover image updated successfully"
+            )
+        );
+    }
+);
+
 
 export { 
     registerUser,
     loginUser,
     logoutUser,
-    refreshAccessToken
+    refreshAccessToken,
+    changeCurrentPassword,
+    getCurrentUser,
+    updateAccountDetails,
+    updateUserAvatar,
+    updateUserCoverImage
 };
 
 
