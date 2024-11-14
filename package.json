@@ -1,5 +1,5 @@
 {
-  "name": "chai-backend",
+  "name": "videotube",
   "version": "1.0.0",
   "type": "module",
   "main": "index.js",
@@ -17,7 +17,7 @@
   "description": "",
   "dependencies": {
     "bcrypt": "^5.1.1",
-    "chai-backend": "file:",
+    "videotube": "file:",
     "cloudinary": "^2.5.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
