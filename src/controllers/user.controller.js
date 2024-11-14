@@ -510,6 +510,76 @@ const getUserChannelProfile = asyncHandler(
     }
 );
 
+const getWatchHistory = asyncHandler(
+    async (req, res) => {
+        const user = await User.aggregate(
+            [
+                {
+                    $match: {
+                        _id: new mongoose.Types.ObjectId(req.user._id)
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "videos",
+                        localField: "watchHistory", //* we are in users collection
+                        foreignField: "_id",
+                        as: "watchHistory",
+                        //? pupulate: -> to get the data from the other collection, learn from mongodb docs and mongoose docs
+                        pipeline: [
+                            {
+                                $lookup: {
+                                    from: "users",
+                                    localField: "owner", //* now we are in videos collection
+                                    foreignField: "_id",
+                                    as: "owner",
+                                    pipeline: [
+                                        {
+                                            $project: {
+                                                fullName: 1,
+                                                username: 1,
+                                                avatar: 1
+                                            }
+                                        }
+                                    ]
+                                },
+                            },
+                            // * just for checking and learning purpose
+                            // {
+                            //     $project: {
+                            //         fullName: 1,
+                            //         username: 1,
+                            //         avatar: 1
+                            //     }
+                            // },
+                            {
+                                $addFields: {
+                                    //? hear existing owner field will be overwritten by new owner field that i defined below
+                                    owner: {
+                                        $first: "$owner"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        )
+        if (!user?.length) {
+            throw new ApiError(404, "User does not exist");
+        }
+
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                user[0].watchHistory,
+                "Watch history fetched successfully"
+            )
+        );
+    }
+);
 
 
 export { 
@@ -522,10 +592,11 @@ export {
     updateAccountDetails,
     updateUserAvatar,
     updateUserCoverImage,
-    getUserChannelProfile
+    getUserChannelProfile,
+    getWatchHistory
 };
 
-
+//linter
 
 
 
