@@ -13,7 +13,7 @@ const uploadOnCloudinary = async (localFilePath) => {
     // upload the file on cloudinary
     const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "auto",
-      folder: "Project--mongooseTutorial-chai-aur-code"
+      folder: "Project--OpenSource--VideoTube"
     })
     //file uploaded successfully
     // console.log("file is uploaded on cloudinary", response.url);
