@@ -5,6 +5,7 @@ import { ApiError } from "../utils/ApiError.util.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.util.js";
 import jwt from "jsonwebtoken";
 import { upload } from "../middlewares/multer.middleware.js";
+import { mongoose } from "mongoose";
 
 const generateAccessAndRefreshTokens = async (userId) => {
     try {
