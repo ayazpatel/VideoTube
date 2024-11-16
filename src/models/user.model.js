@@ -3,55 +3,94 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
-const userSchema = new mongoose.Schema(
+const userHistorySchema = new Schema(
   {
-    watchHistory: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Video",
+      videoId: {
+          type: Schema.Types.ObjectId,
+          ref: "Video"
       },
-    ],
-    username: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-      index: true, // make it searchable
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-    },
-    fullName: {
-      type: String,
-      required: true,
-      trim: true,
-      index: true,
-    },
-    avatar: {
-      type: String, // cloudinary url
-      required: true,
-    },
-    coverImage: {
-      type: String, // cloudinary url
-      // required: true,
-    },
-    password: {
-      type: String,
-      required: [true, "Password is required"],
-    },
-    refreshToken: {
-      type: String,
-    }
-  },
+      thumbnail: {
+          type: String, // cloudinary url
+          // required: true,
+      },
+      title: {
+          type: String,
+          // required: true
+      },
+      description: {
+          type: String,
+          // required: true
+      },
+      duration: {
+          type: Number,
+          // required: true
+      },
+      views: {
+          type: Number,
+      },
+      owner: {
+          type: Schema.Types.ObjectId,
+          ref: "User"
+      },
+      rating: Number
+
+  }, 
   {
-    timestamps:true
+      timestamps: true
   }
 );
+
+const userSchema = new Schema(
+  {
+      username: {
+          type: String,
+          required: true,
+          unique: true,
+          lowercase: true,
+          trim: true, 
+          index: true
+      },
+      email: {
+          type: String,
+          required: true,
+          unique: true,
+          lowecase: true,
+          trim: true, 
+      },
+      fullName: {
+          type: String,
+          required: true,
+          trim: true, 
+          index: true
+      },
+      avatar: {
+          type: String, // cloudinary url
+          required: true,
+      },
+      coverImage: {
+          type: String, // cloudinary url
+      },
+      history: [
+          {
+              type: Schema.Types.ObjectId,
+              ref: "Video"
+          }
+        // ? up<-OR->down 
+          // userHistorySchema
+      ],
+      password: {
+          type: String,
+          required: [true, 'Password is required']
+      },
+      refreshToken: {
+          type: String
+      }
+
+  },
+  {
+      timestamps: true
+  }
+)
 
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();

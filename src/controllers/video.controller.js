@@ -9,30 +9,44 @@ import { getVideoDurationInSeconds } from 'get-video-duration';
 import { response } from "express";
 
 
+//! notworking
+//TODO: Make it workable
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-    //TODO: get all videos based on query, sort, pagination
-    // ? AI Integration - based on userWatchHistory & Playlist Optional (Smart Queries)
+    const { page = 1, limit = 10, query, sortBy = 'createdAt', sortType = 'desc', userId } = req.query;
+    const currentUserId = req.user._id;
 
-    const videos = await Video.aggregate(
-        [
-            //TODO: Start Next With Hear
-        ]
-    );
-    if (videos === 0 || videos === null) {
-        throw new ApiError(404, "No videos found");
+    // Build the query object for filtering
+    let queryObj = {};
+    if (query) {
+        queryObj = { title: { $regex: query, $options: 'i' } }; // Case-insensitive partial match
+    }
+    if (userId) {
+        queryObj.owner = userId; // Filter by video owner
     }
 
-    return res
-    .status(201)
-    .json(
-        new ApiResponse(
-            200,
-            videos,
-            "Videos retrieved successfully"
-        )
-    );
-})
+    // Pagination and sorting options
+    const options = {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+        sort: { [sortBy]: sortType === 'desc' ? -1 : 1 }
+    };
+
+    // Fetching videos with pagination
+    const videos = await Video.paginate(queryObj, options);
+
+    // Check if there are no videos found
+    if (!videos || videos.docs.length === 0) {
+        return res.status(404).json(new ApiResponse(404, {}, "No videos found"));
+    }
+
+    // Return the list of videos with pagination details
+    return res.status(200).json(new ApiResponse(200, {
+        videos: videos.docs,
+        totalDocs: videos.totalDocs,
+        totalPages: videos.totalPages,
+        currentPage: videos.page
+    }, "Videos fetched successfully"));
+});
 
 const publishAVideo = asyncHandler(async (req, res) => {
     const { title, description } = req.body;
@@ -99,12 +113,82 @@ const publishAVideo = asyncHandler(async (req, res) => {
     );
 });
 
+// ? Direct Array Object Entry 
+// async function addToWatchHistory(userId, newEntry) {
+//     try {
+//         const user = await User.findById(userId);
+//         if (!user) {
+//             throw new Error('User not found');
+//         }
+
+//         user.watchHistory.push(newEntry);
+//         await user.save();
+
+//         // console.log('Watch history updated successfully');
+//     } catch (error) {
+//         // console.error('Error updating watch history:', error);
+//     }
+// }
+// ? Direct Video ID Entry
+async function addToWatchHistory(userId, videoId) {
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        user.history.push(videoId);
+        await user.save();
+
+        // console.log('Watch history updated successfully');
+    } catch (error) {
+        // console.error('Error updating watch history:', error);
+    }
+}
 
 const getVideoById = asyncHandler(async (req, res) => {
+
+    //view + 1 count
+    //hhistory add as marked
     const { videoId } = req.params
-    const video = await Video.findById(videoId);
+    const video = await Video.findByIdAndUpdate(
+        videoId,
+        { 
+            $inc: {
+                views: 1 
+            } 
+        },
+        { new: true }
+    );
     if (!video) {
         throw new ApiError(404, "Video not found");
+    }
+    
+
+    const userId = req.user?._id;
+    if (!userId) {
+        throw new ApiError(401, "Unauthorized request");
+    }
+
+    // const newHistory = {
+    //     videoId: video._id,
+    //     thumbnail: video.thumbnail,
+    //     title: video.title,
+    //     description: video.description,
+    //     duration: video.duration,
+    //     views: video.views,
+    //     owner: video.owner,
+    //     rating: 0
+    // }
+
+    // const historyResult = await addToWatchHistory(userId, newHistory);
+    // if (historyResult === null) {
+    //     throw new ApiError(500, "Unable to add to watch history");
+    // }
+
+    const historyResult = await addToWatchHistory(userId, videoId);
+    if (historyResult === null) {
+        throw new ApiError(500, "Unable to add to watch history");
     }
 
     return res
