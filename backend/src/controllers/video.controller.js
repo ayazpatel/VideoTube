@@ -40,12 +40,18 @@ const getAllVideos = asyncHandler(async (req, res) => {
     }
 
     // Return the list of videos with pagination details
-    return res.status(200).json(new ApiResponse(200, {
-        videos: videos.docs,
-        totalDocs: videos.totalDocs,
-        totalPages: videos.totalPages,
-        currentPage: videos.page
-    }, "Videos fetched successfully"));
+    return res.status(200).json(
+        new ApiResponse(
+            200, 
+            {
+                videos: videos.docs,
+                totalDocs: videos.totalDocs,
+                totalPages: videos.totalPages,
+                currentPage: videos.page
+            }, 
+            "Videos fetched successfully"
+        )
+    );
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
