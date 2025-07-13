@@ -1,0 +1,114 @@
+Guide: Using MinIO for Local S3-Compatible StorageThis guide will walk you through setting up a local MinIO server with Docker and configuring your .NET application to use it for file uploads. This replaces the need for AWS S3 credentials during development.Step 1: Run MinIO with DockerThe easiest way to run MinIO is with Docker Compose. Create a file named docker-compose.yml in the root of your project with the following content:File: docker-compose.ymlversion: '3.8'
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: minio-local
+    ports:
+      - "9000:9000"  # API Port
+      - "9001:9001"  # Console Port
+    environment:
+      - MINIO_ROOT_USER=minioadmin      # Your access key
+      - MINIO_ROOT_PASSWORD=minioadmin  # Your secret key
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+volumes:
+  minio_data:
+To start the server, open a terminal in the same directory as this file and run:docker-compose up -d
+Note: If you name your file something other than docker-compose.yml (e.g., minio-compose.yml), you must specify the filename using the -f flag, like this: docker-compose -f minio-compose.yml up -d.After it starts, you can access the MinIO web console at http://localhost:9001 using the credentials minioadmin / minioadmin. You will need to manually create your bucket (e.g., videotube-local) through this web interface.Step 2: Update Your Configuration (appsettings.Development.json)Now, modify your development configuration to point to your local MinIO instance instead of AWS.File: appsettings.Development.json (Updated){
+  // ... other settings
+  "S3Settings": {
+    "BucketName": "videotube-local", // The bucket you created in the MinIO console
+    "ServiceUrl": "http://localhost:9000", // The MinIO API endpoint
+    "AccessKeyId": "minioadmin",
+    "SecretAccessKey": "minioadmin",
+    "ForcePathStyle": true // IMPORTANT for MinIO
+  }
+  // The "Region" field is no longer needed for local MinIO
+}
+Step 3: Update the S3Settings ModelWe need to add the new ServiceUrl and ForcePathStyle properties to our configuration model.File: Configuration/Settings.cs (Updated S3Settings class)// Add these new properties to your existing S3Settings class
+public class S3Settings
+{
+    public string BucketName { get; set; } = null!;
+    public string? Region { get; set; } // No longer required for MinIO, but keep for AWS compatibility
+    public string AccessKeyId { get; set; } = null!;
+    public string SecretAccessKey { get; set; } = null!;
+    public string? ServiceUrl { get; set; } // For local MinIO
+    public bool ForcePathStyle { get; set; } // For local MinIO
+}
+Step 4: Update the S3Service ImplementationFinally, modify the S3Service to handle connecting to either AWS S3 or a local MinIO instance based on the provided configuration. This makes the service more flexible.File: Services/S3Service.cs (Updated)using Amazon;
+using Amazon.S3;
+using Amazon.S3.Model;
+using Microsoft.Extensions.Options;
+using VideoTube.API.Configuration;
+using System.Net;
+
+namespace VideoTube.API.Services;
+
+public class S3Service : IS3Service
+{
+    private readonly IAmazonS3 _s3Client;
+    private readonly S3Settings _s3Settings;
+
+    public S3Service(IOptions<S3Settings> s3Settings)
+    {
+        _s3Settings = s3Settings.Value;
+        var credentials = new Amazon.Runtime.BasicAWSCredentials(_s3Settings.AccessKeyId, _s3Settings.SecretAccessKey);
+        
+        var config = new AmazonS3Config
+        {
+            // If ServiceUrl is specified (for MinIO), use it. Otherwise, build the region endpoint (for AWS).
+            ServiceURL = _s3Settings.ServiceUrl,
+            ForcePathStyle = _s3Settings.ForcePathStyle, // Required for MinIO
+        };
+
+        // Only set RegionEndpoint if ServiceUrl is not set
+        if (string.IsNullOrEmpty(config.ServiceURL) && !string.IsNullOrEmpty(_s3Settings.Region))
+        {
+            config.RegionEndpoint = RegionEndpoint.GetBySystemName(_s3Settings.Region);
+        }
+
+        _s3Client = new AmazonS3Client(credentials, config);
+    }
+
+    public async Task<string> UploadFileAsync(IFormFile file)
+    {
+        var bucketExists = await _s3Client.DoesS3BucketExistAsync(_s3Settings.BucketName);
+        if (!bucketExists)
+        {
+            // For local development, we can create the bucket if it doesn't exist.
+            await _s3Client.PutBucketAsync(_s3Settings.BucketName);
+        }
+
+        var key = $"{Guid.NewGuid()}-{file.FileName}";
+        var request = new PutObjectRequest
+        {
+            BucketName = _s3Settings.BucketName,
+            Key = key,
+            InputStream = file.OpenReadStream(),
+            ContentType = file.ContentType,
+        };
+
+        var response = await _s3Client.PutObjectAsync(request);
+
+        if (response.HttpStatusCode == HttpStatusCode.OK)
+        {
+            // Construct the URL based on whether we are using MinIO or AWS
+            if (!string.IsNullOrEmpty(_s3Settings.ServiceUrl))
+            {
+                // MinIO URL
+                return $"{_s3Settings.ServiceUrl}/{_s3Settings.BucketName}/{key}";
+            }
+            else
+            {
+                // AWS S3 URL
+                return $"https://{_s3Settings.BucketName}.s3.{_s3Settings.Region}.amazonaws.com/{key}";
+            }
+        }
+        
+        throw new Exception("File upload failed.");
+    }
+}
+No Other Changes Needed!Because we used interfaces (IS3Service) and dependency injection, the AuthService and Program.cs files do not need to be changed. They depend on the IS3Service abstraction, not the concrete implementation, so our application will work seamlessly with the new MinIO setup.You are now fully configured to use a local, Docker-hosted MinIO server for all your file storage during development.
