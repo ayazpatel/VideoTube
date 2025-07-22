@@ -1,0 +1,1 @@
+docker exec minio-local sh -c "mc alias set local http://localhost:9000 minioadmin minioadmin && mc anonymous set download local/videotube-local"
