@@ -1,0 +1,23 @@
+{
+  "name": "videotube-api-testing",
+  "version": "1.0.0",
+  "description": "API testing suite for VideoTube backend",
+  "main": "test-api.js",
+  "scripts": {
+    "test": "node test-api.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "form-data": "^4.0.0",
+    "fs": "^0.0.1-security",
+    "path": "^0.12.7"
+  },
+  "keywords": [
+    "api",
+    "testing",
+    "videotube",
+    "backend"
+  ],
+  "author": "Ayaz Patel",
+  "license": "ISC"
+}

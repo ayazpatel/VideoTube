@@ -320,24 +320,46 @@ const updateAccountDetails = asyncHandler(
     async (req, res) => {
         const { fullName, email } = req.body;
 
-        if (!(fullName || email)) {
-            throw new ApiError(400, "All fields are required");
+        if (!fullName && !email) {
+            throw new ApiError(400, "At least one field is required to update");
+        }
+
+        // Build update object with only provided fields
+        const updateFields = {};
+        if (fullName) updateFields.fullName = fullName.trim();
+        if (email) {
+            // Email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                throw new ApiError(400, "Invalid email format");
+            }
+            
+            // Check if email already exists for another user
+            const existingUser = await User.findOne({ 
+                email: email,
+                _id: { $ne: req.user?._id }
+            });
+            
+            if (existingUser) {
+                throw new ApiError(409, "Email already exists");
+            }
+            
+            updateFields.email = email.toLowerCase().trim();
         }
 
         const user = await User.findByIdAndUpdate(
             req.user?._id,
             {
-                $set: {
-                    fullName, //? ES6 syntax -> if key and value are same then we can write it once
-                    //? i.e fullName: fullName
-                    email
-                }
+                $set: updateFields
             },
             {
-                new: true //? this results in returning the updated user information
-            },
-            //? we can add another 3rd object too {}
+                new: true
+            }
         ).select("-password -refreshToken");
+
+        if (!user) {
+            throw new ApiError(404, "User not found");
+        }
 
         return res
         .status(200)
@@ -345,7 +367,7 @@ const updateAccountDetails = asyncHandler(
             new ApiResponse(
                 200,
                 user,
-                "User updated successfully"
+                "Account details updated successfully"
             )
         );
     }

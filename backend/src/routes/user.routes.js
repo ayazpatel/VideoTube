@@ -52,12 +52,12 @@ router.route("/update-account").patch(
   verifyJWT,
   updateAccountDetails
 );
-router.route("/update-avatar").patch(
+router.route("/avatar").patch(
   verifyJWT,
   upload.single("avatar"),
   updateUserAvatar
 );
-router.route("/update-cover-image").patch(
+router.route("/cover-image").patch(
   verifyJWT,
   upload.single("coverImage"),
   updateUserCoverImage
