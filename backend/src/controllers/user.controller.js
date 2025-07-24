@@ -2,7 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.util.js";
 import { User } from "../models/user.model.js";
 import { ApiResponse } from "../utils/ApiResponse.util.js";
 import { ApiError } from "../utils/ApiError.util.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.util.js";
+import { uploadOnMinIO, deleteFromMinIO, extractKeyFromUrl } from "../utils/minio.util.js";
 import jwt from "jsonwebtoken";
 import { upload } from "../middlewares/multer.middleware.js";
 import { mongoose } from "mongoose";
@@ -92,8 +92,8 @@ const registerUser = asyncHandler( async (req, res) => {
       throw new ApiError(400, "Avatar file is required")
   }
 
-  const avatar = await uploadOnCloudinary(avatarLocalPath)
-  const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+  const avatar = await uploadOnMinIO(avatarLocalPath, "avatars")
+  const coverImage = await uploadOnMinIO(coverImageLocalPath, "covers")
 
   if (!avatar) {
       throw new ApiError(400, "Avatar file is required")
@@ -359,7 +359,11 @@ const updateUserAvatar = asyncHandler(
             throw new ApiError(400, "Avatar file is missing");
         }
 
-        const avatar = await uploadOnCloudinary(avatarLocalPath);
+        // Get current user to get old avatar URL
+        const currentUser = await User.findById(req.user?._id);
+        const oldAvatarUrl = currentUser?.avatar;
+
+        const avatar = await uploadOnMinIO(avatarLocalPath, "avatars");
         if (!avatar) {
             throw new ApiError(400, "Error while uploading avatar");
         }
@@ -375,6 +379,17 @@ const updateUserAvatar = asyncHandler(
                 new: true
             }
         ).select("-password -refreshToken");
+
+        // Delete old avatar from MinIO if it exists
+        if (oldAvatarUrl) {
+            try {
+                const oldAvatarKey = extractKeyFromUrl(oldAvatarUrl);
+                await deleteFromMinIO(oldAvatarKey);
+            } catch (error) {
+                console.log("Error deleting old avatar:", error);
+                // Don't throw error here as the main operation (update) was successful
+            }
+        }
 
         return res
         .status(200)
@@ -396,9 +411,11 @@ const updateUserCoverImage = asyncHandler(
             throw new ApiError(400, "Cover image file is missing");
         }
 
-        //TODO: delete old image
+        // Get current user to get old cover image URL
+        const currentUser = await User.findById(req.user?._id);
+        const oldCoverImageUrl = currentUser?.coverImage;
 
-        const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+        const coverImage = await uploadOnMinIO(coverImageLocalPath, "covers");
         if (!coverImage) {
             throw new ApiError(400, "Error while uploading coverImage");
         }
@@ -414,6 +431,17 @@ const updateUserCoverImage = asyncHandler(
                 new: true
             }
         ).select("-password -refreshToken");
+
+        // Delete old cover image from MinIO if it exists
+        if (oldCoverImageUrl) {
+            try {
+                const oldCoverImageKey = extractKeyFromUrl(oldCoverImageUrl);
+                await deleteFromMinIO(oldCoverImageKey);
+            } catch (error) {
+                console.log("Error deleting old cover image:", error);
+                // Don't throw error here as the main operation (update) was successful
+            }
+        }
 
         return res
         .status(200)
