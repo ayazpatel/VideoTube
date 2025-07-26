@@ -1,0 +1,30 @@
+# Development Dockerfile for Backend with hot reload
+FROM node:18-alpine
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy package.json and package-lock.json
+COPY package*.json ./
+
+# Install all dependencies (including dev dependencies)
+RUN npm install
+
+# Create a non-root user to run the application
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S videotube -u 1001
+
+# Create the public/temp directory and set permissions
+RUN mkdir -p public/temp && chown -R videotube:nodejs /app
+
+# Switch to the non-root user
+USER videotube
+
+# Expose the port the app runs on
+EXPOSE 5000
+
+# Define environment variable
+ENV NODE_ENV=development
+
+# Command to run the application in development mode
+CMD ["npm", "run", "dev"]

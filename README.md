@@ -123,6 +123,33 @@ VideoTube/
 - MongoDB (v6+)
 - MinIO or AWS S3
 - Git
+- Docker & Docker Compose (for containerized deployment)
+
+### 🐳 Quick Start with Docker (Recommended)
+
+The fastest way to get VideoTube running is with Docker:
+
+```bash
+git clone https://github.com/ayazpatel/VideoTube.git
+cd VideoTube
+
+# Run the setup script
+# For Linux/Mac:
+./docker-setup.sh
+
+# For Windows:
+docker-setup.bat
+
+# Or manually:
+docker-compose up -d
+```
+
+Access your application:
+- **Frontend**: <http://localhost:3000>
+- **Backend API**: <http://localhost:5000>
+- **MinIO Console**: <http://localhost:9001>
+
+### 🛠️ Manual Setup
 
 ### 1. Clone the Repository
 
@@ -289,22 +316,74 @@ For complete API documentation, see [API_DOCUMENTATION.md](backend/API_DOCUMENTA
 
 ## 🚀 Deployment
 
-### Using Docker
+### Using Docker Compose (Recommended)
 
-1. **Backend Deployment**
+#### Production Deployment
+
+1. **Full Stack Deployment**
+
+```bash
+# Clone the repository
+git clone https://github.com/ayazpatel/VideoTube.git
+cd VideoTube
+
+# Create environment file
+cp backend/.env.example backend/.env
+# Edit backend/.env with your production values
+
+# Start all services
+docker-compose up -d
+
+# Access the application
+# Frontend: http://localhost:3000
+# Backend API: http://localhost:5000
+# MinIO Console: http://localhost:9001
+```
+
+2. **View logs**
+
+```bash
+# View all service logs
+docker-compose logs -f
+
+# View specific service logs
+docker-compose logs -f backend
+docker-compose logs -f frontend
+```
+
+3. **Stop services**
+
+```bash
+docker-compose down
+```
+
+#### Development with Docker
+
+```bash
+# Start development environment with hot reload
+docker-compose -f docker-compose.dev.yml up -d
+
+# Access development servers
+# Backend API: http://localhost:5000
+# MinIO Console: http://localhost:7001
+```
+
+### Individual Service Deployment
+
+#### Backend Deployment
 
 ```bash
 cd backend
 docker build -t videotube-backend .
-docker run -p 5000:5000 videotube-backend
+docker run -p 5000:5000 --env-file .env videotube-backend
 ```
 
-2. **Frontend Deployment**
+#### Frontend Deployment
 
 ```bash
 cd frontend
 docker build -t videotube-frontend .
-docker run -p 3000:3000 videotube-frontend
+docker run -p 3000:80 videotube-frontend
 ```
 
 ### Using Kubernetes
@@ -314,6 +393,15 @@ Deploy using the provided Kubernetes manifests:
 ```bash
 kubectl apply -f infra/k8s/
 ```
+
+### Docker Services
+
+The Docker setup includes:
+
+- **MongoDB**: Database service on port 27017
+- **MinIO**: Object storage on ports 9000 (API) and 9001 (Console)
+- **Backend**: Node.js API server on port 5000
+- **Frontend**: React app served by Nginx on port 3000 (mapped to 80)
 
 ### Production Considerations
 
