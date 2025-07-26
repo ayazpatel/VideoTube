@@ -361,7 +361,7 @@ This project is licensed under the ISC License. See the [LICENSE](LICENSE) file 
 ### Ayaz Patel
 
 - GitHub: [@ayazpatel](https://github.com/ayazpatel)
-- Email: <ayaz@example.com>
+- Email: <ayazpatel701@gmail.com>
 
 ## 🤝 Contributing
 
