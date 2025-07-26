@@ -1,6 +1,6 @@
 # VideoTube 🎬
 
-A full-stack YouTube-like video sharing platform built with modern web technologies. VideoTube allows users to upload, share, and interact with videos while providing a comprehensive social media experience with features like comments, likes, playlists, and subscriptions.
+A full-stack YouTube-like video streaming platform built with modern web technologies. VideoTube allows users to upload, share, and interact with videos while providing a comprehensive social media experience with features like comments, likes, playlists, and subscriptions.
 
 ![VideoTube Banner](https://img.shields.io/badge/VideoTube-Full--Stack-blue?style=for-the-badge)
 
@@ -79,7 +79,7 @@ A full-stack YouTube-like video sharing platform built with modern web technolog
 ### DevOps & Infrastructure
 
 - **Containerization**: Docker & Docker Compose
-- **Orchestration**: Kubernetes manifests
+- **Orchestration**: Kubernetes manifests (Future Planned)
 - **Development**: Hot reload, auto-restart with Nodemon
 - **Testing**: Comprehensive API testing suite
 
